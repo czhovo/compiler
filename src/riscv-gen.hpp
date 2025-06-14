@@ -32,7 +32,7 @@ public:
     void GenerateBinary(const koopa_raw_binary_t &binary, const koopa_raw_value_t &result) {
         std::string lhs_reg = GetOperandReg(binary.lhs);
         std::string rhs_reg = GetOperandReg(binary.rhs);
-        std::string dest_reg = GetOperandReg(result);
+        std::string dest_reg = AllocTempReg();
 
         switch(binary.op) {
             case KOOPA_RBO_ADD:
@@ -81,6 +81,8 @@ public:
             default:
                 assert(false);
         }
+
+        reg_alloc_[result] = dest_reg;
     }
 
     std::string GetOperandReg(const koopa_raw_value_t &value) {
