@@ -1,7 +1,7 @@
 %code requires {
-  #include <memory>
-  #include <string>
-  #include "ast.hpp"
+	#include <memory>
+	#include <string>
+	#include "ast.hpp"
 }
 
 %{
@@ -30,9 +30,10 @@ using namespace std;
 // 至于为什么要用字符串指针而不直接用 string 或者 unique_ptr<string>?
 // 请自行 STFW 在 union 里写一个带析构函数的类会出现什么情况
 %union {
-  std::string *str_val;
-  int int_val;
-  BaseAST *ast_val;
+	std::string *str_val;
+	int int_val;
+	BaseAST *ast_val;
+	ExpAST *exp_val;
 }
 
 // lexer 返回的所有 token 种类的声明
@@ -41,8 +42,11 @@ using namespace std;
 %token <str_val> IDENT
 %token <int_val> INT_CONST
 
+%token AND OR EQ NE LT LE GT GE '+' '-' '*' '/' '%' '!' '(' ')'
+
 // 非终结符的类型定义
-%type <ast_val> FuncDef FuncType Block Stmt
+%type <ast_val> CompUnit FuncDef FuncType Block Stmt
+%type <exp_val> Exp PrimaryExp UnaryExp MulExp AddExp RelExp EqExp LAndExp LOrExp
 %type <int_val> Number
 
 %%
@@ -53,12 +57,12 @@ using namespace std;
 // 此时我们应该把 FuncDef 返回的结果收集起来, 作为 AST 传给调用 parser 的函数
 // $1 指代规则里第一个符号的返回值, 也就是 FuncDef 的返回值
 CompUnit
-  : FuncDef {
-    auto comp_unit = make_unique<CompUnitAST>();
-    comp_unit->func_def = unique_ptr<BaseAST>($1);
-    ast = move(comp_unit);
-  }
-  ;
+	: FuncDef {
+		auto comp_unit = make_unique<CompUnitAST>();
+		comp_unit->func_def = unique_ptr<BaseAST>($1);
+		ast = move(comp_unit);
+	}
+	;
 
 // FuncDef ::= FuncType IDENT '(' ')' Block;
 // 我们这里可以直接写 '(' 和 ')', 因为之前在 lexer 里已经处理了单个字符的情况
@@ -71,49 +75,129 @@ CompUnit
 // 虽然此处你看不出用 unique_ptr 和手动 delete 的区别, 但当我们定义了 AST 之后
 // 这种写法会省下很多内存管理的负担
 FuncDef
-  : FuncType IDENT '(' ')' Block {
-    auto ast = new FuncDefAST();
-    ast->func_type = unique_ptr<BaseAST>($1);
-    ast->ident = *unique_ptr<string>($2);
-    ast->block = unique_ptr<BaseAST>($5);
-    $$ = ast;
-  }
-  ;
+	: FuncType IDENT '(' ')' Block {
+		auto ast = new FuncDefAST();
+		ast->func_type = unique_ptr<BaseAST>($1);
+		ast->ident = *unique_ptr<string>($2);
+		ast->block = unique_ptr<BaseAST>($5);
+		$$ = ast;
+	}
+	;
 
 FuncType
-  : INT {
-    auto ast = new FuncTypeAST();
-    ast->type = "int";
-    $$ = ast;
-  }
-  ;
+	: INT {
+		auto ast = new FuncTypeAST();
+		ast->type = "int";
+		$$ = ast;
+	}
+	;
 
 Block
-  : '{' Stmt '}' {
-    auto ast = new BlockAST();
-    ast->stmt = unique_ptr<BaseAST>($2);
-    $$ = ast;
-  }
-  ;
+	: '{' Stmt '}' {
+		auto ast = new BlockAST();
+		ast->stmt = unique_ptr<BaseAST>($2);
+		$$ = ast;
+	}
+	;
 
 Stmt
-  : RETURN Number ';' {
-    auto ast = new StmtAST();
-    ast->number = $2;
-    $$ = ast;
-  }
-  ;
+    : RETURN Exp ';' {
+        auto ast = new StmtAST();
+        ast->exp = unique_ptr<ExpAST>($2);
+        $$ = ast;
+    }
+    ;
+
+Exp        : LOrExp { $$ = $1; }
+           ;
+
+LOrExp     : LAndExp { $$ = $1; }
+           | LOrExp OR LAndExp { 
+               $$ = new BinaryExpAST("||", $1, $3); 
+             }
+           ;
+
+LAndExp    : EqExp { $$ = $1; }
+           | LAndExp AND EqExp { 
+               $$ = new BinaryExpAST("&&", $1, $3); 
+             }
+           ;
+
+EqExp      : RelExp { $$ = $1; }
+           | EqExp EQ RelExp { 
+               $$ = new BinaryExpAST("==", $1, $3); 
+             }
+           | EqExp NE RelExp { 
+               $$ = new BinaryExpAST("!=", $1, $3); 
+             }
+           ;
+
+RelExp     : AddExp { $$ = $1; }
+           | RelExp LT AddExp { 
+               $$ = new BinaryExpAST("<", $1, $3); 
+             }
+           | RelExp GT AddExp { 
+               $$ = new BinaryExpAST(">", $1, $3); 
+             }
+           | RelExp LE AddExp { 
+               $$ = new BinaryExpAST("<=", $1, $3); 
+             }
+           | RelExp GE AddExp { 
+               $$ = new BinaryExpAST(">=", $1, $3); 
+             }
+           ;
+
+AddExp     : MulExp { $$ = $1; }
+           | AddExp '+' MulExp { 
+               $$ = new BinaryExpAST("+", $1, $3); 
+             }
+           | AddExp '-' MulExp { 
+               $$ = new BinaryExpAST("-", $1, $3); 
+             }
+           ;
+
+MulExp     : UnaryExp { $$ = $1; }
+           | MulExp '*' UnaryExp { 
+               $$ = new BinaryExpAST("*", $1, $3); 
+             }
+           | MulExp '/' UnaryExp { 
+               $$ = new BinaryExpAST("/", $1, $3); 
+             }
+           | MulExp '%' UnaryExp { 
+               $$ = new BinaryExpAST("%", $1, $3); 
+             }
+           ;
+
+UnaryExp   : PrimaryExp { $$ = $1; }
+           | '+' UnaryExp { 
+               $$ = new UnaryExpAST("+", $2); 
+             }
+           | '-' UnaryExp { 
+               $$ = new UnaryExpAST("-", $2); 
+             }
+           | '!' UnaryExp { 
+               $$ = new UnaryExpAST("!", $2); 
+             }
+           ;
+
+PrimaryExp : '(' Exp ')' { $$ = $2; }
+           | Number { 
+               auto ast = new PrimaryExpAST();
+               ast->val = $1;
+               $$ = ast;
+             }
+           ;
 
 Number
-  : INT_CONST {
-    $$ = $1;
-  }
-  ;
+	: INT_CONST {
+		$$ = $1;
+	}
+	;
 
 %%
 
 // 定义错误处理函数, 其中第二个参数是错误信息
 // parser 如果发生错误 (例如输入的程序出现了语法错误), 就会调用这个函数
 void yyerror(unique_ptr<BaseAST> &ast, const char *s) {
-  cerr << "error: " << s << endl;
+	cerr << "error: " << s << endl;
 }

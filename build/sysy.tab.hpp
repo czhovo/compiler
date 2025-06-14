@@ -46,9 +46,9 @@ extern int yydebug;
 /* "%code requires" blocks.  */
 #line 1 "/root/compiler/src/sysy.y"
 
-  #include <memory>
-  #include <string>
-  #include "ast.hpp"
+	#include <memory>
+	#include <string>
+	#include "ast.hpp"
 
 #line 54 "/root/compiler/build/sysy.tab.hpp"
 
@@ -60,7 +60,15 @@ extern int yydebug;
     INT = 258,
     RETURN = 259,
     IDENT = 260,
-    INT_CONST = 261
+    INT_CONST = 261,
+    AND = 262,
+    OR = 263,
+    EQ = 264,
+    NE = 265,
+    LT = 266,
+    LE = 267,
+    GT = 268,
+    GE = 269
   };
 #endif
 
@@ -70,11 +78,12 @@ union YYSTYPE
 {
 #line 32 "/root/compiler/src/sysy.y"
 
-  std::string *str_val;
-  int int_val;
-  BaseAST *ast_val;
+	std::string *str_val;
+	int int_val;
+	BaseAST *ast_val;
+	ExpAST *exp_val;
 
-#line 78 "/root/compiler/build/sysy.tab.hpp"
+#line 87 "/root/compiler/build/sysy.tab.hpp"
 
 };
 typedef union YYSTYPE YYSTYPE;
