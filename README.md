@@ -10,6 +10,9 @@ debug文件夹用来放src之外的东西，例如hello.c, hello.koopa
 
 deepseek目前还挺好用
 
+写lv3才发现还有下半部分（risc-v），忘记交了，交一下试试
+
+
 ## lv3
 前半：本地测试ok，deepseek好坑
 
