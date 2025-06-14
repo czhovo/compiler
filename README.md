@@ -32,4 +32,4 @@ gt不能直接用sgt指令处理，因为没有这一条指令，因此采用slt
 
 deepseek说可能是因为寄存器被覆盖，把二元运算结果塞到新分配的寄存器中试试
 
-nothing but i need a push
+[3.2]镜像到gitlab是付费功能...sb 手动算了
