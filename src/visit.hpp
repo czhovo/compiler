@@ -45,8 +45,11 @@ void Visit(const koopa_raw_value_t &value, RiscVGenerator &gen) {
             gen.GenerateReturn(value->kind.data.ret);
             break;
         case KOOPA_RVT_INTEGER:
-            // 整数常量在return指令中处理
             break;
+        case KOOPA_RVT_BINARY: {
+            gen.GenerateBinary(value->kind.data.binary, value);
+            break;
+        }
         default:
             assert(false);
     }

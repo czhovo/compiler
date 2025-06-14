@@ -19,3 +19,6 @@ deepseek目前还挺好用
 在sysy.y的产生式里用了很多非终结符号，例如 LOrExp | LOrExp OR LAndExp 被deepseek写成 LOrExp | LOrExp "||" LAndExp，修正这一错误后通过大部分测试点
 
 对or和and的处理不正确，首先是输出应该是0或1，例如11 || 0应该输出1而非11，此外and不能直接按位求与，修正这两个错误后通过本地测试
+
+后半：在deepseek的帮助下轻松完成了，nb
+gt不能直接用sgt指令处理，因为没有这一条指令，因此采用slt并交换两个寄存器

@@ -1,37 +1,110 @@
 #pragma once
 
 #include <sstream>
-#include <fstream>
 #include <string>
+#include <vector>
+#include <map>
+#include "koopa.h"
 
-// RISC-V代码生成器类
 class RiscVGenerator {
 private:
-    std::ostringstream code_;   
+    std::ostringstream code_;
+    int temp_reg_counter_ = 0;
+    std::map<const koopa_raw_value_t, std::string> reg_alloc_;
+
 
 public:
-    // 生成头部信息
+    std::string AllocTempReg() {
+        return "t" + std::to_string(temp_reg_counter_++ % 7); // t0-t6循环使用
+    }
     void GenerateHeader() {
         code_ << "  .text\n";
         code_ << "  .globl main\n";
     }
 
-    // 生成函数入口
     void GenerateFunction(const koopa_raw_function_t &func) {
-        code_ << "main:\n";
+        temp_reg_counter_ = 0; // 函数开始时重置临时寄存器计数器
+        reg_alloc_.clear();
+        code_ << "main:\n"; // +1跳过@符号
     }
 
-    // 生成返回指令
+    // 处理二元运算
+    void GenerateBinary(const koopa_raw_binary_t &binary, const koopa_raw_value_t &result) {
+        std::string lhs_reg = GetOperandReg(binary.lhs);
+        std::string rhs_reg = GetOperandReg(binary.rhs);
+        std::string dest_reg = GetOperandReg(result);
+
+        switch(binary.op) {
+            case KOOPA_RBO_ADD:
+                code_ << "  add " << dest_reg << ", " << lhs_reg << ", " << rhs_reg << "\n";
+                break;
+            case KOOPA_RBO_SUB:
+                code_ << "  sub " << dest_reg << ", " << lhs_reg << ", " << rhs_reg << "\n";
+                break;
+            case KOOPA_RBO_MUL:
+                code_ << "  mul " << dest_reg << ", " << lhs_reg << ", " << rhs_reg << "\n"; 
+                break;
+            case KOOPA_RBO_DIV:
+                code_ << "  div " << dest_reg << ", " << lhs_reg << ", " << rhs_reg << "\n";
+                break;
+            case KOOPA_RBO_MOD:
+                code_ << "  rem " << dest_reg << ", " << lhs_reg << ", " << rhs_reg << "\n";
+                break;
+            case KOOPA_RBO_EQ:
+                code_ << "  xor " << dest_reg << ", " << lhs_reg << ", " << rhs_reg << "\n";
+                code_ << "  seqz " << dest_reg << ", " << dest_reg << "\n";
+                break;
+            case KOOPA_RBO_NOT_EQ:
+                code_ << "  xor " << dest_reg << ", " << lhs_reg << ", " << rhs_reg << "\n";
+                code_ << "  snez " << dest_reg << ", " << dest_reg << "\n";
+                break;
+            case KOOPA_RBO_LT:
+                code_ << "  slt " << dest_reg << ", " << lhs_reg << ", " << rhs_reg << "\n";
+                break;
+            case KOOPA_RBO_LE:
+                code_ << "  sgt " << dest_reg << ", " << lhs_reg << ", " << rhs_reg << "\n";
+                code_ << "  seqz " << dest_reg << ", " << dest_reg << "\n";
+                break;
+            case KOOPA_RBO_GT:
+                code_ << "  slt " << dest_reg << ", " << rhs_reg << ", " << lhs_reg << "\n";
+                break;
+            case KOOPA_RBO_GE:
+                code_ << "  slt " << dest_reg << ", " << lhs_reg << ", " << rhs_reg << "\n";
+                code_ << "  seqz " << dest_reg << ", " << dest_reg << "\n";
+                break;
+            case KOOPA_RBO_AND:
+                code_ << "  and " << dest_reg << ", " << lhs_reg << ", " << rhs_reg << "\n";
+                break;
+            case KOOPA_RBO_OR:
+                code_ << "  or "  << dest_reg << ", " << lhs_reg << ", " << rhs_reg << "\n";
+                break;
+            default:
+                assert(false);
+        }
+    }
+
+    std::string GetOperandReg(const koopa_raw_value_t &value) {
+        auto it = reg_alloc_.find(value);
+        if (it != reg_alloc_.end()) {
+            return it->second;
+        }
+
+        std::string reg = AllocTempReg();
+        if (value->kind.tag == KOOPA_RVT_INTEGER) {
+            code_ << "  li " << reg << ", " << value->kind.data.integer.value << "\n";
+        }
+        reg_alloc_[value] = reg;
+        return reg;
+    }
+
+
     void GenerateReturn(const koopa_raw_return_t &ret) {
-        if (ret.value != nullptr && ret.value->kind.tag == KOOPA_RVT_INTEGER) {
-            int32_t val = ret.value->kind.data.integer.value;
-            code_ << "  li a0, " << val << "\n";
+        if (ret.value) {
+            std::string reg = GetOperandReg(ret.value);
+            if (reg != "a0") code_ << "  mv a0, " << reg << "\n";
         }
         code_ << "  ret\n";
     }
 
-    // 获取生成的代码
-    std::string GetCode() const {
-        return code_.str();
-    }
+    std::string GetCode() const { return code_.str(); }
 };
