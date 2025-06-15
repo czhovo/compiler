@@ -66,7 +66,7 @@ public:
                 code_ << "  slt " << dest_reg << ", " << lhs_reg << ", " << rhs_reg << "\n";
                 break;
             case KOOPA_RBO_LE:
-                code_ << "  sgt " << dest_reg << ", " << lhs_reg << ", " << rhs_reg << "\n";
+                code_ << "  slt " << dest_reg << ", " << rhs_reg << ", " << lhs_reg << "\n"; 
                 code_ << "  seqz " << dest_reg << ", " << dest_reg << "\n";
                 break;
             case KOOPA_RBO_GT:
