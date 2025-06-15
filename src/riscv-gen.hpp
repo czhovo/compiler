@@ -82,6 +82,9 @@ public:
             case KOOPA_RBO_OR:
                 code_ << "  or "  << dest_reg << ", " << lhs_reg << ", " << rhs_reg << "\n";
                 break;
+            case KOOPA_RBO_XOR:
+                code_ << "  xor " << dest_reg << ", " << lhs_reg << ", " << rhs_reg << "\n";
+                break;
             default:
                 assert(false);
         }
@@ -103,15 +106,10 @@ public:
         return reg;
     }
 
-
     void GenerateReturn(const koopa_raw_return_t &ret) {
         if (ret.value) {
             std::string reg = GetOperandReg(ret.value);
-            if (reg != "a0") {
-                std::string tmp = (reg[0] == 'a') ? AllocTempReg() : "a0";
-                code_ << "  mv " << tmp << ", " << reg << "\n";
-                if (tmp != "a0") code_ << "  mv a0, " << tmp << "\n";
-            }
+            if (reg != "a0") code_ << "  mv a0, " << reg << "\n";
         }
         code_ << "  ret\n";
     }
