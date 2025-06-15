@@ -107,7 +107,11 @@ public:
     void GenerateReturn(const koopa_raw_return_t &ret) {
         if (ret.value) {
             std::string reg = GetOperandReg(ret.value);
-            if (reg != "a0") code_ << "  mv a0, " << reg << "\n";
+            if (reg != "a0") {
+                std::string tmp = (reg[0] == 'a') ? AllocTempReg() : "a0";
+                code_ << "  mv " << tmp << ", " << reg << "\n";
+                if (tmp != "a0") code_ << "  mv a0, " << tmp << "\n";
+            }
         }
         code_ << "  ret\n";
     }
