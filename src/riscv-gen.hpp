@@ -15,7 +15,11 @@ private:
 
 public:
     std::string AllocTempReg() {
-        return "t" + std::to_string(temp_reg_counter_++ % 7); // t0-t6循环使用
+        const std::vector<std::string> regs = {
+            "t0", "t1", "t2", "t3", "t4", "t5", "t6",
+            "a0", "a1", "a2", "a3", "a4", "a5", "a6", "a7"
+        };
+        return regs[temp_reg_counter_++ % regs.size()];
     }
     void GenerateHeader() {
         code_ << "  .text\n";
